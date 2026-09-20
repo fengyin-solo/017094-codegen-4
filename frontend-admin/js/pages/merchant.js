@@ -19,7 +19,9 @@
     importTab: 'file',
     importParsedItems: [],
     importFileContent: null,
-    importFileName: ''
+    importFileName: '',
+    // 通用知识命中情况视角的商家
+    scopeMerchantId: ''
   };
 
   // ====================== DOM 元素缓存 ======================
@@ -73,7 +75,12 @@
       importModalCancel: document.getElementById('importModalCancel'),
       importModalCancelNoPreview: document.getElementById('importModalCancelNoPreview'),
       importModalSubmit: document.getElementById('importModalSubmit'),
-      importNoPreview: document.getElementById('importNoPreview')
+      importNoPreview: document.getElementById('importNoPreview'),
+      // 通用知识命中情况
+      globalScopeMerchantSelect: document.getElementById('globalScopeMerchantSelect'),
+      globalScopeEmpty: document.getElementById('globalScopeEmpty'),
+      globalScopeBlock: document.getElementById('globalScopeBlock'),
+      globalScopeTableBody: document.getElementById('globalScopeTableBody')
     };
   }
 
@@ -107,8 +114,13 @@
             if (state.currentMerchantId === btn.dataset.id) {
               state.currentMerchantId = '';
             }
+            if (state.scopeMerchantId === btn.dataset.id) {
+              state.scopeMerchantId = '';
+            }
             self.render();
             self.fillSelect();
+            GlobalScopeView.fillSelect();
+            GlobalScopeView.render();
             KnowledgeManager.fillFormSelect();
             KnowledgeManager.render();
             Toast.show('商家删除成功', 'success');
@@ -170,6 +182,8 @@
       this.closeModal();
       this.render();
       this.fillSelect();
+      GlobalScopeView.fillSelect();
+      GlobalScopeView.render();
       KnowledgeManager.fillFormSelect();
       KnowledgeManager.render();
     }
@@ -636,6 +650,49 @@
     }
   };
 
+  // ====================== 通用知识命中情况（按商家视角，只读） ======================
+  var GlobalScopeView = {
+    fillSelect: function () {
+      var options = MockStore.getMerchants().map(function (m) {
+        return { value: m.id, label: m.name + '（' + m.id + '）' };
+      });
+      Select.fill(elements.globalScopeMerchantSelect, options, '请选择商家', state.scopeMerchantId);
+    },
+
+    render: function () {
+      var merchantId = state.scopeMerchantId;
+      if (!merchantId) {
+        elements.globalScopeEmpty.textContent = '请选择商家查看通用知识命中情况';
+        elements.globalScopeEmpty.classList.remove('hidden');
+        elements.globalScopeBlock.classList.add('hidden');
+        elements.globalScopeTableBody.innerHTML = '';
+        return;
+      }
+
+      // 与通用知识页共用同一判定，保证多页归属结果一致
+      var rows = MockStore.getGlobalKnowledgeForMerchant(merchantId);
+      if (rows.length === 0) {
+        elements.globalScopeEmpty.textContent = '暂无通用知识';
+        elements.globalScopeEmpty.classList.remove('hidden');
+        elements.globalScopeBlock.classList.add('hidden');
+        elements.globalScopeTableBody.innerHTML = '';
+        return;
+      }
+
+      elements.globalScopeEmpty.classList.add('hidden');
+      elements.globalScopeBlock.classList.remove('hidden');
+
+      Table.render(elements.globalScopeTableBody, rows, function (r) {
+        var statusCell = r.effective
+          ? '<span><span class="scope-dot scope-dot-on"></span>生效</span>'
+          : '<span><span class="scope-dot scope-dot-off"></span>不生效</span>';
+        return '<td class="text-obsidian">' + Utils.escapeHtml(r.standardQ || '') + '</td>' +
+          '<td>' + statusCell + '</td>' +
+          '<td class="text-subtle text-sm">' + Utils.escapeHtml(r.reason) + '</td>';
+      });
+    }
+  };
+
   // ====================== 事件绑定 ======================
   function bindEvents() {
     // 商家相关
@@ -721,6 +778,12 @@
     Modal.bindOverlayClose(elements.batchImportModal, function () {
       BatchImportManager.closeModal();
     });
+
+    // 通用知识命中情况
+    elements.globalScopeMerchantSelect.addEventListener('change', function () {
+      state.scopeMerchantId = elements.globalScopeMerchantSelect.value || '';
+      GlobalScopeView.render();
+    });
   }
 
   // ====================== 初始化 ======================
@@ -730,6 +793,8 @@
     MerchantManager.render();
     MerchantManager.fillSelect();
     KnowledgeManager.render();
+    GlobalScopeView.fillSelect();
+    GlobalScopeView.render();
   }
 
   // ====================== 导出模块 ======================
@@ -738,7 +803,8 @@
     state: state,
     MerchantManager: MerchantManager,
     KnowledgeManager: KnowledgeManager,
-    BatchImportManager: BatchImportManager
+    BatchImportManager: BatchImportManager,
+    GlobalScopeView: GlobalScopeView
   };
 
   // 页面加载完成后初始化

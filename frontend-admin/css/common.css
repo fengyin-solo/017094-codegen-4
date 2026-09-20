@@ -617,3 +617,97 @@ select.select-common:focus {
   color: #be123c;
   cursor: help;
 }
+
+/* ========== 通用知识 · 生效范围徽标 ========== */
+.scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+.scope-badge-all {
+  background: #ecfdf5;
+  color: #047857;
+}
+.scope-badge-partial {
+  background: #fffbeb;
+  color: #b45309;
+}
+.scope-badge-none {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.scope-badge-blacklisted {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* 生效范围弹层中的商家行 */
+.scope-merchant-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: 0.625rem;
+  transition: background 0.15s, border-color 0.15s;
+  cursor: pointer;
+}
+.scope-merchant-item:hover {
+  background: var(--slate-50);
+  border-color: var(--border);
+}
+.scope-merchant-item.is-blacklisted {
+  background: #fef2f2;
+  border-color: #fecaca;
+  cursor: not-allowed;
+}
+.scope-merchant-item input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--emerald-600);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.scope-merchant-item.is-blacklisted input[type="checkbox"] {
+  cursor: not-allowed;
+  accent-color: #cbd5e1;
+}
+.scope-merchant-meta { min-width: 0; flex: 1; }
+.scope-merchant-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--slate-800);
+}
+.scope-merchant-id {
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--slate-400);
+}
+.scope-merchant-item.is-blacklisted .scope-merchant-name { color: #9f1239; }
+.scope-merchant-tag {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+.scope-tag-blacklisted { background: #ffe4e6; color: #be123c; }
+.scope-tag-excluded { background: #fef3c7; color: #92400e; }
+.scope-tag-effective { background: #ecfdf5; color: #047857; }
+
+/* 商家页：通用知识命中状态点 */
+.scope-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  margin-right: 0.375rem;
+  vertical-align: middle;
+}
+.scope-dot-on { background: var(--emerald-500); }
+.scope-dot-off { background: #f43f5e; }

@@ -29,14 +29,24 @@
   function save(key, value) { StorageUtil.save(key, value); }
 
   // ====================== 用户认证模块 ======================
+  // 权限点：调整通用知识按商家的生效范围（例外配置）
+  var PERMISSION_MANAGE_GLOBAL_SCOPE = 'global_scope:manage';
+
   var defaultUsers = [
-    { username: 'user', password: '123456', name: '管理员' }
+    { username: 'user', password: '123456', name: '管理员', permissions: [PERMISSION_MANAGE_GLOBAL_SCOPE] },
+    // 只读运营账号：可查看生效范围，但不能调整例外
+    { username: 'ops', password: '123456', name: '运营（只读）', permissions: [] }
   ];
 
   var AuthModule = {
-    // 获取用户列表
+    // 获取用户列表（兼容历史 localStorage 中没有 permissions 字段的账号）
     getUsers: function () {
-      return load('users', defaultUsers);
+      var users = load('users', defaultUsers);
+      return users.map(function (u) {
+        if (Array.isArray(u.permissions)) return u;
+        var def = defaultUsers.find(function (d) { return d.username === u.username; });
+        return Object.assign({}, u, { permissions: def ? def.permissions.slice() : [] });
+      });
     },
 
     // 初始化默认用户（首次加载时调用）
@@ -56,6 +66,7 @@
         var session = {
           username: user.username,
           name: user.name,
+          permissions: Array.isArray(user.permissions) ? user.permissions.slice() : [],
           loginTime: Date.now()
         };
         save('session', session);
@@ -69,14 +80,32 @@
       StorageUtil.remove('session');
     },
 
-    // 获取当前登录用户
+    // 获取当前登录用户（兼容历史会话中缺失的 permissions 字段）
     getCurrentUser: function () {
-      return load('session', null);
+      var session = load('session', null);
+      if (session && !Array.isArray(session.permissions)) {
+        var users = this.getUsers();
+        var u = users.find(function (x) { return x.username === session.username; });
+        session.permissions = u ? u.permissions.slice() : [];
+        save('session', session);
+      }
+      return session;
     },
 
     // 检查是否已登录
     isLoggedIn: function () {
       return this.getCurrentUser() !== null;
+    },
+
+    // 当前用户是否拥有指定权限
+    hasPermission: function (permission) {
+      var u = this.getCurrentUser();
+      return !!(u && Array.isArray(u.permissions) && u.permissions.indexOf(permission) !== -1);
+    },
+
+    // 是否可调整通用知识按商家的生效范围
+    canManageGlobalScope: function () {
+      return this.hasPermission(PERMISSION_MANAGE_GLOBAL_SCOPE);
     },
 
     // 检查登录状态，未登录则跳转到登录页
@@ -241,6 +270,14 @@
   // ====================== 黑名单初始数据 ======================
   var defaultBlacklistMerchantIds = ['M002'];
 
+  // ====================== 通用知识按商家例外（生效范围）初始数据 ======================
+  // key：通用知识 ID；value：被排除（不接收该条知识）的商家 ID 列表
+  // 仅存储例外，其它商家共享同一份通用知识内容
+  var defaultGlobalKnowledgeExclusions = {
+    // “订单如何申请退款？”对 M001、M003 不生效，其余商家照常生效
+    'k_global_2': ['M001', 'M003']
+  };
+
   // 一级行业选项（用于下拉）
   var industryLevel1Options = ['零售', '餐饮', '教育', '医疗', '金融', '科技'];
 
@@ -316,6 +353,20 @@
       var all = load('merchantKnowledge', {});
       delete all[id];
       save('merchantKnowledge', all);
+      // 同步移出黑名单
+      store.removeBlacklist(id);
+      // 同步清理各条通用知识中对该商家的例外
+      var exclusions = store.getGlobalKnowledgeExclusions();
+      var changed = false;
+      Object.keys(exclusions).forEach(function (kid) {
+        var next = exclusions[kid].filter(function (mid) { return mid !== id; });
+        if (next.length !== exclusions[kid].length) {
+          if (next.length) exclusions[kid] = next;
+          else delete exclusions[kid];
+          changed = true;
+        }
+      });
+      if (changed) save('globalKnowledgeExclusions', exclusions);
       return list;
     },
     getMerchantKnowledge: function (merchantId) {
@@ -527,7 +578,133 @@
     deleteGlobalKnowledge: function (id) {
       var list = store.getGlobalKnowledge().filter(function (k) { return k.id !== id; });
       save('globalKnowledge', list);
+      // 同步清理该条知识的按商家例外，避免残留
+      store.clearGlobalKnowledgeExclusions(id);
       return list;
+    },
+
+    // ---------- 通用知识 · 按商家生效范围（例外） ----------
+    /**
+     * 获取全部按商家例外映射
+     * @returns {Object} { knowledgeId: [merchantId, ...] }
+     */
+    getGlobalKnowledgeExclusions: function () {
+      return load('globalKnowledgeExclusions', defaultGlobalKnowledgeExclusions);
+    },
+
+    /** 获取某条通用知识被排除的商家 ID 列表 */
+    getGlobalKnowledgeExcludedMerchantIds: function (knowledgeId) {
+      var all = store.getGlobalKnowledgeExclusions();
+      return Array.isArray(all[knowledgeId]) ? all[knowledgeId].slice() : [];
+    },
+
+    /**
+     * 设置某条通用知识被排除的商家（保存配置）
+     * 权限校验：无 global_scope:manage 权限时拒绝写入
+     * 已配置的其它知识、黑名单数据均不受影响
+     * @returns {{success: boolean, message?: string}}
+     */
+    setGlobalKnowledgeExclusions: function (knowledgeId, merchantIds) {
+      if (!AuthModule.canManageGlobalScope()) {
+        return { success: false, message: '无权限调整通用知识生效范围' };
+      }
+      var validIds = {};
+      store.getMerchants().forEach(function (m) { validIds[m.id] = true; });
+      var ids = (merchantIds || []).filter(function (id, idx, arr) {
+        return validIds[id] && arr.indexOf(id) === idx;
+      });
+      var all = store.getGlobalKnowledgeExclusions();
+      if (ids.length) {
+        all[knowledgeId] = ids;
+      } else {
+        delete all[knowledgeId]; // 全部恢复生效后移除映射，例外不留空壳
+      }
+      save('globalKnowledgeExclusions', all);
+      return { success: true };
+    },
+
+    /** 清除某条知识的全部例外（删除知识时内部调用） */
+    clearGlobalKnowledgeExclusions: function (knowledgeId) {
+      var all = store.getGlobalKnowledgeExclusions();
+      if (Object.prototype.hasOwnProperty.call(all, knowledgeId)) {
+        delete all[knowledgeId];
+        save('globalKnowledgeExclusions', all);
+      }
+    },
+
+    /**
+     * 统一生效判定：某条通用知识是否对某商家生效。
+     * 黑名单商家整体排除在通用知识范围之外；非黑名单商家再按该条自己的例外列表决定。
+     * 同一商家命中多条通用知识时，按各条的范围分别判定、互不影响。
+     * @returns {boolean}
+     */
+    isGlobalKnowledgeEffective: function (knowledgeId, merchantId) {
+      var blacklist = store.getBlacklist();
+      if (blacklist.indexOf(merchantId) !== -1) return false;
+      var excluded = store.getGlobalKnowledgeExcludedMerchantIds(knowledgeId);
+      return excluded.indexOf(merchantId) === -1;
+    },
+
+    /**
+     * 某条通用知识的生效范围汇总（供列表展示）
+     * @returns {{total:number, effectiveCount:number, excludedCount:number,
+     *           blacklistedCount:number, excludedMerchantIds:string[],
+     *           blacklistedMerchantIds:string[], effectiveMerchantIds:string[]}}
+     */
+    getGlobalKnowledgeScope: function (knowledgeId) {
+      var merchants = store.getMerchants();
+      var blacklist = store.getBlacklist();
+      var excluded = store.getGlobalKnowledgeExcludedMerchantIds(knowledgeId);
+      var blacklisted = merchants.filter(function (m) {
+        return blacklist.indexOf(m.id) !== -1;
+      }).map(function (m) { return m.id; });
+      var explicitlyExcluded = excluded.filter(function (id) {
+        // 黑名单商家单独归类展示，但例外配置仍保留（移出黑名单后恢复）
+        return blacklist.indexOf(id) === -1;
+      });
+      var effective = merchants.filter(function (m) {
+        return store.isGlobalKnowledgeEffective(knowledgeId, m.id);
+      }).map(function (m) { return m.id; });
+      return {
+        total: merchants.length,
+        effectiveCount: effective.length,
+        excludedCount: explicitlyExcluded.length,
+        blacklistedCount: blacklisted.length,
+        excludedMerchantIds: explicitlyExcluded,
+        blacklistedMerchantIds: blacklisted,
+        effectiveMerchantIds: effective
+      };
+    },
+
+    /**
+     * 某个商家命中的通用知识及其生效状态（供商家页面展示，与通用知识页同一判定）
+     * @returns {Array<{id,standardQ,similarQs,answer,effective:boolean,reason:string}>}
+     */
+    getGlobalKnowledgeForMerchant: function (merchantId) {
+      var blacklisted = store.getBlacklist().indexOf(merchantId) !== -1;
+      var excluded = store.getGlobalKnowledgeExcludedMerchantIds.bind(store);
+      return store.getGlobalKnowledge().map(function (k) {
+        var effective;
+        var reason;
+        if (blacklisted) {
+          effective = false;
+          reason = '商家在黑名单中，通用知识整体不生效';
+        } else if (excluded(k.id).indexOf(merchantId) !== -1) {
+          effective = false;
+          reason = '该条已被单独排除';
+        } else {
+          effective = true;
+          reason = '生效中';
+        }
+        return {
+          id: k.id,
+          standardQ: k.standardQ,
+          similarQs: k.similarQs || [],
+          answer: k.answer || '',
+          effective: effective,
+          reason: reason
+        };
+      });
     },
 
     getBlacklist: function () {
@@ -570,6 +747,11 @@
         industryKnowledgeCount += (store.getIndustryKnowledge(i.id) || []).length;
       });
       var globalCount = (store.getGlobalKnowledge() || []).length;
+      // 存在按商家例外的通用知识条数
+      var exclusionsMap = store.getGlobalKnowledgeExclusions();
+      var globalScopeExceptionCount = Object.keys(exclusionsMap).filter(function (kid) {
+        return (exclusionsMap[kid] || []).length > 0;
+      }).length;
       return {
         merchantCount: merchants.length,
         merchantKnowledgeCount: merchantKnowledgeCount,
@@ -578,6 +760,7 @@
         industryCount: industries.length,
         industryKnowledgeCount: industryKnowledgeCount,
         globalKnowledgeCount: globalCount,
+        globalScopeExceptionCount: globalScopeExceptionCount,
         totalKnowledgeCount: merchantKnowledgeCount + merchantSetKnowledgeCount + industryKnowledgeCount + globalCount,
       };
     },
@@ -586,6 +769,9 @@
   // ====================== 导出模块 ======================
   // 将 AuthModule 挂载到 store 上
   store.Auth = AuthModule;
+  store.PERMISSIONS = {
+    MANAGE_GLOBAL_SCOPE: PERMISSION_MANAGE_GLOBAL_SCOPE
+  };
 
   // 导出到全局
   global.MockStore = store;

@@ -97,6 +97,39 @@
             </div>
           </div>
         </section>
+
+        <!-- 通用知识命中情况（按商家视角展示生效范围，只读） -->
+        <section>
+          <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
+            <div>
+              <h2 class="section-title tracking-tight text-slate-900">通用知识命中情况</h2>
+              <p class="section-desc mt-1 text-sm text-slate-500">该商家命中的通用知识及各自生效状态；同一商家命中多条时按各条生效范围分别判定，黑名单商家整体不生效。</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-medium text-slate-600 whitespace-nowrap">选择商家</label>
+              <select id="globalScopeMerchantSelect" class="input-common select-common w-52" title="查看某商家的通用知识生效情况">
+                <option value="">请选择商家</option>
+              </select>
+            </div>
+          </div>
+          <div id="globalScopeEmpty" class="premium-card empty-state rounded-xl border border-slate-100">请选择商家查看通用知识命中情况</div>
+          <div id="globalScopeBlock" class="hidden">
+            <div class="premium-card overflow-hidden rounded-xl border border-slate-100 shadow-sm">
+              <div class="table-wrap">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th>标准问</th>
+                      <th class="w-32">生效状态</th>
+                      <th class="w-64">说明</th>
+                    </tr>
+                  </thead>
+                  <tbody id="globalScopeTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   </div>
