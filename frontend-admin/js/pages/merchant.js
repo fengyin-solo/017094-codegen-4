@@ -73,7 +73,10 @@
       importModalCancel: document.getElementById('importModalCancel'),
       importModalCancelNoPreview: document.getElementById('importModalCancelNoPreview'),
       importModalSubmit: document.getElementById('importModalSubmit'),
-      importNoPreview: document.getElementById('importNoPreview')
+      importNoPreview: document.getElementById('importNoPreview'),
+      // 通用知识生效情况（多页面同口径）
+      globalScopeBody: document.getElementById('globalScopeBody'),
+      globalScopeHint: document.getElementById('globalScopeHint')
     };
   }
 
@@ -632,7 +635,47 @@
       MerchantManager.fillSelect();
       KnowledgeManager.fillFormSelect();
       KnowledgeManager.render();
+      GlobalScopeManager.render();
       Toast.show('成功导入 ' + items.length + ' 条知识', 'success');
+    }
+  };
+
+  // ====================== 通用知识生效情况（与通用知识页共用同一判定口径）======================
+  var GlobalScopeManager = {
+    render: function () {
+      var tbody = elements.globalScopeBody;
+      var hint = elements.globalScopeHint;
+      if (!tbody) return;
+
+      if (!state.currentMerchantId) {
+        tbody.innerHTML = '';
+        if (hint) hint.classList.remove('hidden');
+        return;
+      }
+      if (hint) hint.classList.add('hidden');
+
+      var rows = MockStore.getGlobalKnowledgeForMerchant(state.currentMerchantId);
+      Table.render(tbody, rows, function (row) {
+        var k = row.knowledge;
+        var statusCell;
+        var reasonCell;
+        if (row.effective) {
+          statusCell = '<span class="effective-yes inline-flex items-center gap-1">' +
+            '<span class="iconify" data-icon="lucide:check-circle-2" data-width="14" data-height="14"></span>生效</span>';
+          reasonCell = '<span class="text-slate-500 text-xs">未命中黑名单，也未命中本条的例外</span>';
+        } else if (row.reason === 'blacklist') {
+          statusCell = '<span class="effective-no-blacklist inline-flex items-center gap-1">' +
+            '<span class="iconify" data-icon="lucide:user-x" data-width="14" data-height="14"></span>不生效</span>';
+          reasonCell = '<span class="text-slate-500 text-xs">该商家在黑名单中，对所有通用知识整体不生效；移出黑名单后恢复</span>';
+        } else {
+          statusCell = '<span class="effective-no-excluded inline-flex items-center gap-1">' +
+            '<span class="iconify" data-icon="lucide:ban" data-width="14" data-height="14"></span>不生效</span>';
+          reasonCell = '<span class="text-slate-500 text-xs">该商家被设为本条知识的例外；其它通用知识仍按各自范围分别判定</span>';
+        }
+        return '<td class="text-obsidian">' + Utils.escapeHtml(k.standardQ || '') + '</td>' +
+          '<td>' + statusCell + '</td>' +
+          '<td>' + reasonCell + '</td>';
+      });
     }
   };
 
@@ -656,6 +699,7 @@
     elements.merchantSelect.addEventListener('change', function () {
       state.currentMerchantId = elements.merchantSelect.value || '';
       KnowledgeManager.render();
+      GlobalScopeManager.render();
     });
     elements.btnAddKnowledge.addEventListener('click', function () {
       KnowledgeManager.openModal();
@@ -730,6 +774,7 @@
     MerchantManager.render();
     MerchantManager.fillSelect();
     KnowledgeManager.render();
+    GlobalScopeManager.render();
   }
 
   // ====================== 导出模块 ======================
@@ -738,7 +783,8 @@
     state: state,
     MerchantManager: MerchantManager,
     KnowledgeManager: KnowledgeManager,
-    BatchImportManager: BatchImportManager
+    BatchImportManager: BatchImportManager,
+    GlobalScopeManager: GlobalScopeManager
   };
 
   // 页面加载完成后初始化

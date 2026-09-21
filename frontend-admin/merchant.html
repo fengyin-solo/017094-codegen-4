@@ -97,6 +97,27 @@
             </div>
           </div>
         </section>
+
+        <!-- 通用知识对该商家的生效情况（与通用知识页同一判定口径） -->
+        <section>
+          <h2 class="section-title tracking-tight text-slate-900 mb-1">通用知识生效情况</h2>
+          <p class="section-desc text-sm text-slate-500">按上方「筛选」选定商家查看：同一条通用知识是否对其生效，由该条的例外配置与黑名单共同决定，与通用知识页结果一致。</p>
+          <div class="premium-card overflow-hidden rounded-xl border border-slate-100 shadow-sm">
+            <div class="table-wrap">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th>标准问</th>
+                    <th class="w-36">对该商家</th>
+                    <th>原因</th>
+                  </tr>
+                </thead>
+                <tbody id="globalScopeBody"></tbody>
+              </table>
+            </div>
+            <div id="globalScopeHint" class="empty-state hidden">请先在上方筛选中选择一个商家，查看通用知识对其的生效情况。</div>
+          </div>
+        </section>
       </div>
     </main>
   </div>

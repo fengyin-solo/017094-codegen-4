@@ -47,9 +47,12 @@
           <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
             <div>
               <h2 class="section-title tracking-tight text-slate-900">通用知识</h2>
-              <p class="section-desc mt-1 text-sm text-slate-500">对所有商家、行业生效；黑名单中的商家不生效通用知识。</p>
+              <p class="section-desc mt-1 text-sm text-slate-500">默认对所有商家、行业生效；可按条设置例外商家，黑名单商家则整体不生效通用知识。</p>
             </div>
-            <button type="button" id="btnAddKnowledge" class="btn-primary inline-flex items-center gap-2"><span class="iconify" data-icon="lucide:plus" data-width="16" data-height="16"></span>新增知识</button>
+            <div class="flex items-center gap-3">
+              <span id="roleBadge" class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600"></span>
+              <button type="button" id="btnAddKnowledge" class="btn-primary inline-flex items-center gap-2"><span class="iconify" data-icon="lucide:plus" data-width="16" data-height="16"></span>新增知识</button>
+            </div>
           </div>
           <div class="premium-card overflow-hidden rounded-xl border border-slate-100 shadow-sm">
             <div class="table-wrap">
@@ -59,7 +62,8 @@
                     <th>标准问</th>
                     <th>相似问</th>
                     <th>答案</th>
-                    <th class="text-right w-28">操作</th>
+                    <th class="w-56">生效范围</th>
+                    <th class="text-right w-36">操作</th>
                   </tr>
                 </thead>
                 <tbody id="knowledgeTableBody"></tbody>
@@ -73,7 +77,7 @@
           <div class="flex flex-wrap items-end justify-between gap-4 mb-4">
             <div>
               <h2 class="section-title tracking-tight text-slate-900">商家黑名单</h2>
-              <p class="section-desc mt-1 text-sm text-slate-500">黑名单中的商家不生效通用知识。</p>
+              <p class="section-desc mt-1 text-sm text-slate-500">黑名单中的商家整体不生效通用知识；移出黑名单后自动恢复（命中单条例外的仍按该条例外判定）。</p>
             </div>
             <div class="filter-row flex-wrap mb-0">
               <select id="blacklistAddSelect" class="input-common select-common w-52">
@@ -123,6 +127,54 @@
       <div class="flex justify-end gap-3 mt-6">
         <button type="button" id="knowledgeModalCancel" class="btn-secondary">取消</button>
         <button type="button" id="knowledgeModalSubmit" class="btn-primary inline-flex items-center gap-2"><span class="iconify" data-icon="lucide:check" data-width="16" data-height="16"></span>保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 生效范围配置弹层 -->
+  <div id="scopeModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box premium-card max-w-2xl rounded-2xl border border-slate-200 shadow-voyage">
+      <h3 class="modal-title text-slate-900">设置生效范围</h3>
+      <div class="space-y-4">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">通用知识</div>
+          <div id="scopeKnowledgeQ" class="text-sm font-medium text-slate-900"></div>
+          <p class="text-xs text-slate-500 mt-1.5">内容仍为所有非例外商家共享的同一份；勾选「设为例外」的商家不接收本条，其它商家照常生效。黑名单商家对全部通用知识整体不生效。</p>
+        </div>
+
+        <!-- 当前被排除的商家（配置时一眼可见） -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="!mb-0">当前被排除的商家</label>
+            <span id="scopeExcludedSummary" class="text-xs text-slate-500"></span>
+          </div>
+          <div id="scopeExcludedChips" class="flex flex-wrap gap-2 min-h-[2rem]"></div>
+        </div>
+
+        <div id="scopeReadonlyTip" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          当前为只读角色，仅可查看生效范围，调整例外需要管理员权限。
+        </div>
+
+        <div>
+          <label>按商家配置</label>
+          <div class="scope-merchant-wrap border border-slate-200 rounded-xl">
+            <table class="w-full text-sm">
+              <thead>
+                <tr>
+                  <th class="w-28">商家 ID</th>
+                  <th>商家名称</th>
+                  <th class="w-32">当前状态</th>
+                  <th class="w-28 text-center">设为例外</th>
+                </tr>
+              </thead>
+              <tbody id="scopeMerchantBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button type="button" id="scopeModalCancel" class="btn-secondary">关闭</button>
+        <button type="button" id="scopeModalSubmit" class="btn-primary inline-flex items-center gap-2"><span class="iconify" data-icon="lucide:check" data-width="16" data-height="16"></span>保存范围</button>
       </div>
     </div>
   </div>

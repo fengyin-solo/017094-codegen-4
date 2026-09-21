@@ -617,3 +617,100 @@ select.select-common:focus {
   color: #be123c;
   cursor: help;
 }
+
+/* ========== 通用知识 - 生效范围 ========== */
+.scope-summary {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.scope-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+.scope-chip-ok { background: #ecfdf5; color: #047857; }
+.scope-chip-excluded { background: #fff7ed; color: #c2410c; }
+.scope-chip-blacklist { background: #f1f5f9; color: #475569; }
+
+.scope-excluded-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.625rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+}
+.scope-excluded-chip .chip-remove {
+  display: inline-flex;
+  cursor: pointer;
+  color: #c2410c;
+}
+.scope-excluded-empty {
+  font-size: 0.75rem;
+  color: var(--slate-400);
+  padding: 0.25rem 0;
+}
+
+.scope-merchant-wrap {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.scope-merchant-wrap table {
+  width: 100%;
+  font-size: 0.8125rem;
+  border-collapse: collapse;
+}
+.scope-merchant-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--slate-600);
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--slate-200);
+}
+.scope-merchant-wrap td {
+  padding: 0.625rem 0.875rem;
+  color: var(--slate-700);
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+.scope-merchant-wrap tbody tr:last-child td { border-bottom: none; }
+.scope-merchant-wrap tbody tr.row-blacklist {
+  background: #f8fafc;
+}
+.scope-merchant-wrap tbody tr.row-excluded {
+  background: #fffaf5;
+}
+.scope-merchant-wrap td.text-center,
+.scope-merchant-wrap th.text-center { text-align: center; }
+
+/* 生效情况徽标（商家页通用知识视角） */
+.effective-yes { color: #047857; font-weight: 500; }
+.effective-no-excluded { color: #c2410c; font-weight: 500; }
+.effective-no-blacklist { color: #64748b; font-weight: 500; }
+
+input[type="checkbox"].scope-check {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #0f172a;
+  cursor: pointer;
+}
+input[type="checkbox"].scope-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
